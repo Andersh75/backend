@@ -15,7 +15,7 @@ def hello():
     try:
         uResponse = requests.get(uri)
     except requests.ConnectionError:
-       return "Connection Err"
+       return "Connection Errsssss"
     Jresponse = uResponse.text
     # return "Hello World!"
     return Jresponse
