@@ -35,7 +35,6 @@ import mechanize
 import simplejson
 
 
-
 app = Flask(__name__)
 app.config.from_pyfile('config.cfg')
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////db/flaskapp.db'
