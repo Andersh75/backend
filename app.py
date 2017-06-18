@@ -7,7 +7,16 @@ from flask_cors import CORS, cross_origin
 
 
 app = Flask(__name__)
+app.config['SQALCHEMY_DATABASE_URI'] = 'sqlite://///db/flaskapp.db'
 CORS(app)
+
+db = SQLAlchemy(app)
+
+class ExampleTable(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+db.create_all()
+
 
 @app.route("/")
 def hello():
