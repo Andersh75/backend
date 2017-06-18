@@ -152,7 +152,7 @@ class Notourclasses(db.Model):
     # __table_args__ = (db.UniqueConstraint('starttime', 'endtime', 'courses_id', 'dates_id),)
     # UniqueConstraint('starttime', 'endtime', 'courses_id', 'dates_id')
 
-
+'''
 class RegistrationForm(Form):
     initials = TextField('Initials', [validators.Length(min=2, max=20)])
     firstname = TextField('First name', [validators.Length(min=2, max=20)])
@@ -164,6 +164,9 @@ class RegistrationForm(Form):
     ])
     confirm = PasswordField('Repeat Password')
     # accept_tos = BooleanField('I accept the Terms of Service and Privacy Notice (updated Jan 22, 2015)', [validators.Required()])
+
+
+'''
 
 class Person(db.Model):
     id = db.Column(db.Integer, primary_key=True)
