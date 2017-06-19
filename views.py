@@ -24,6 +24,8 @@ def restartall():
 
     # ADD_ALL_TEACHERS_TO_LIST
     for item in departments:
+
+        # Firstname, Lastname, Email, Username
         tempdict = staffperdepartment(item)
         templist.append(tempdict)
 
@@ -31,11 +33,12 @@ def restartall():
     teachersfromdepartment(templist)
 
 
-    # ADD_ALL_COURSES_TO_DB
+
     tempdict = {}
     templist = []
 
 
+    # COLLECTING COURSE CODE AND ROUNDID PER YEAR AND TERM
     # tempdict20151 = courseinfoperyearandterm(2015, 1)
     # tempdict20152 = courseinfoperyearandterm(2015, 2)
     # tempdict20161 = courseinfoperyearandterm(2016, 1)
@@ -43,8 +46,8 @@ def restartall():
     tempdict20171 = courseinfoperyearandterm(2017, 1)
 
 
-
-
+    # ROUND ID IS LIKE PART ONE OR TWO OF TERM
+    # COLLECT COURSE CODE, YEAR, TERM
     # addcoursestotables_first(tempdict20151)
     # addcoursestotables_first(tempdict20152)
     # addcoursestotables_first(tempdict20161)

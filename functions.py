@@ -18,7 +18,8 @@ def createtables():
     db.session.commit()
 
 
-# ADDING TEACHERS TO DB
+# ADDING TEACHERS TO LIST
+# Firstname, Lastname, Email, Username, Department
 def staffperdepartment(department):
     try:
         req = urllib2.urlopen('https://www.kth.se/directory/a/%s' % (department))
@@ -56,6 +57,8 @@ def staffperdepartment(department):
     return tempdict2
 
 
+# ADDING TEACHERS TO DB IF EMAIL EXSISTS
+# Firstname, Lastname, Email, Username, Department
 def teachersfromdepartment(templist):
     for items in templist:
 
@@ -131,13 +134,13 @@ def courseinfoperyearandterm(x, y):
             startterm = item['startterm']
             roundid = item['roundid']
 
-            period = None
-
             year = startterm[:4]
 
             term = startterm[-1:]
 
-            tempdict = {'coursecode': coursecode, 'year': year, 'term': term, 'period': period, 'startterm': startterm, 'roundid': roundid}
+
+
+            tempdict = {'coursecode': coursecode, 'year': year, 'term': term, 'periodone': False, 'periodtwo': False, 'periodthree': False, 'periodfour': False, 'startterm': startterm, 'roundid': roundid}
 
             print "ADDED", tempdict['coursecode'].upper(), tempdict['year'].upper(), "TO LIST OF COURSES"
 
@@ -158,9 +161,6 @@ def courseinfoperyearandterm(x, y):
 
 
 
-
-
-
 def addcoursestotables_first(tempdict):
 
     for item in tempdict['courseinfo']:
@@ -168,7 +168,6 @@ def addcoursestotables_first(tempdict):
 
         year = item['year']
         term = item['term']
-        period = item['period']
         roundid = item['roundid']
 
         try:
@@ -179,11 +178,79 @@ def addcoursestotables_first(tempdict):
             try:
                 courseround = xml.find('courseround')
 
-                endweek = courseround['endweek']
+                endweek = courseround['endweek'][-2:]
                 item['endweek'] = endweek
 
-                startweek = courseround['startweek']
+                startweek = courseround['startweek'][-2:]
                 item['startweek'] = startweek
+
+                periodone = False
+                periodtwo = False
+                periodthree = False
+                periodfour = False
+
+                if int(startweek) < 5:
+                    periodthree = True
+
+                elif int(startweek) < 14:
+                    periodfour = True
+
+                elif int(startweek) < 37:
+                    periodone = True
+
+                elif int(startweek) < 49:
+                    periodtwo = True
+
+
+                if int(endweek) < 5:
+                    periodtwo = True
+                    if periodthree:
+                        periodfour = True
+                        periodone = True
+                    if periodfour:
+                        periodone = True
+
+                elif int(endweek) < 14:
+                    periodthree = True
+                    if periodfour:
+                        periodone = True
+                        periodtwo = True
+                    if periodone:
+                        periodtwo = True
+
+                elif int(endweek) < 37:
+                    periodfour = True
+                    if periodone:
+                        periodtwo = True
+                        periodthree = True
+                    if periodtwo:
+                        periodthree = True
+
+                elif int(endweek) < 49:
+                    periodone = True
+                    if periodtwo:
+                        periodthree = True
+                        periodfour = True
+                    if periodthree:
+                        periodfour = True
+
+                print "coursecode", coursecode
+                print "year", year
+                print "term", term
+                print "roundid", roundid
+                print "period one", periodone
+                print "period two", periodtwo
+                print "period three", periodthree
+                print "period four", periodfour
+                print "endweek", endweek
+                print "startweek", startweek
+
+                item['periodone'] = periodone
+                item['periodtwo'] = periodtwo
+                item['periodthree'] = periodthree
+                item['periodfour'] = periodfour
+
+
 
             except Exception, e:
                 item['endweek'] = None
@@ -216,17 +283,24 @@ def coursesfromdepartment2(item):
     code = item['coursecode']
     year = item['year']
     term = item['term']
-    period = item['period']
+    periodone = item['periodone']
+    periodtwo = item['periodtwo']
+    periodthree = item['periodthree']
+    periodfour = item['periodfour']
+
     roundid = item['roundid']
     responsible = item['emailcourseresponsible']
     startweek = item['startweek']
     endweek = item['endweek']
 
-    # print code, year, term, period, roundid, responsible, startweek, endweek
+    # print code, year, term, periods, roundid, responsible, startweek, endweek
 
     courseobj = create_or_fetch_courseobj(code, year)
     courseobj.term = term
-    courseobj.period = period
+    courseobj.periodone = periodone
+    courseobj.periodtwo = periodtwo
+    courseobj.periodthree = periodthree
+    courseobj.periodfour = periodfour
     courseobj.roundid = roundid
     courseobj.startweek = startweek
     courseobj.endweek = endweek
@@ -241,7 +315,7 @@ def coursesfromdepartment2(item):
             # print "exists!!!!"
             courseobj.responsible_id = Teachers.query.filter_by(email=responsible).first().id
 
-    print "ADDED TERM, PERIOD, ROUNDID, STARTWEEK, ENDWEEK AND COURSE RESPONSIBLE TO", courseobj.code, courseobj.year
+    print "ADDED TERM, PERIODS, ROUNDID, STARTWEEK, ENDWEEK AND COURSE RESPONSIBLE TO", courseobj.code, courseobj.year
 
     db.session.commit()
 
