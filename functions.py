@@ -10,6 +10,44 @@ import json
 from flask import json
 import simplejson
 from flask import jsonify
+import cookielib
+import mechanize
+
+
+def open_password_protected_site(link):
+
+    # Browser
+    br = mechanize.Browser()
+
+    # Enable cookie support for urllib2
+    cookiejar = cookielib.LWPCookieJar()
+    br.set_cookiejar(cookiejar)
+
+    # Broser options
+    br.set_handle_equiv(True)
+    br.set_handle_gzip(True)
+    br.set_handle_redirect(True)
+    br.set_handle_referer(True)
+    br.set_handle_robots(False)
+
+    # ??
+    # br.set_handle_refresh( mechanize._http.HTTPRefreshProcessor(), max_time = 1 )
+
+    br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
+    # print "heh"
+    # authenticate
+    br.open(link)
+
+    br.select_form(nr=0)
+    # these two come from the code you posted
+    # where you would normally put in your username and password
+    br["username"] = 'ahell'
+    br["password"] = '-Gre75kger-'
+    res = br.submit()
+
+    print "Success!\n"
+
+    return br
 
 
 # CREATE TABLES
@@ -18,70 +56,228 @@ def createtables():
     db.session.commit()
 
 
-# ADDING TEACHERS TO LIST
-# Firstname, Lastname, Email, Username, Department
-def staffperdepartment(department):
-    try:
-        req = urllib2.urlopen('https://www.kth.se/directory/a/%s' % (department))
-
-        xml = BeautifulSoup(req)
-
-        templist = xml.find("table")
-        templist = templist.find("tbody")
-        templist = templist.findAll("tr")
-
-        templist2 = []
-        tempdict = {}
-
-        tempdict2 = {}
-
-        for tr in templist:
-            tdlist = tr.findAll("a")
-            firstname = tdlist[2].text
-            lastname = tdlist[1].text
-            email = tdlist[3].text
-            username = tdlist[1]['href'][27:]
-
-            tempdict = {'firstname': firstname, 'lastname': lastname, 'email': email, 'username': username}
-            templist2.append(tempdict)
-            print "ADDED", tempdict['firstname'].upper(), tempdict['lastname'].upper(), "TO LIST OF TEACHERS"
-
-        tempdict2 = {'department': department, 'teacher': templist2}
-
-    except Exception, e:
-        varcode = "no list of staff per department"
-        print varcode.upper()
-        # print x
-        # print y
-
-    return tempdict2
+def allcourses():
+    templist = db.session.query(Courses).order_by(Courses.code.desc()).all()
+    # templist = db.session.query(Courses).order_by(Courses.code).all()
+    return templist
 
 
-# ADDING TEACHERS TO DB IF EMAIL EXSISTS
-# Firstname, Lastname, Email, Username, Department
-def teachersfromdepartment(templist):
-    for items in templist:
+def create_course_date_connection(courseobj, dateobj):
 
-        department = items['department']
+    if courseobj and dateobj:
+        coursedatesubq = db.session.query(Dates).join(Dates.courses).filter(and_(Dates.id == dateobj.id, Courses.id == courseobj.id))
+        alreadycoursedate = db.session.query(coursedatesubq.exists()).scalar()
 
-        for item in items['teacher']:
-            firstname = item['firstname']
-            lastname = item['lastname']
-            email = item['email']
-            username = item['username']
+        if alreadycoursedate:
+            print "COURSE-DATE EXISTS ALREADY"
+        else:
+            print "NO PREVIOUS COURSE-DATE"
+            print "CREATING COURSE-DATE"
+            dateobj.courses.append(courseobj)
+            db.session.commit()
+    else:
+        print "NO COURSOBJ OR DATEOBJ"
 
-            if email:
-                teacherobj = create_or_fetch_teacherobj(email)
 
-                teacherobj.firstname = firstname
-                teacherobj.lastname = lastname
-                teacherobj.email = email
-                teacherobj.username = username
-                teacherobj.department = department
+def create_room_class_connection(roomobj, classobj):
 
+    if roomobj and classobj:
+        roomclasssubq = db.session.query(Classes).join(Classes.rooms).filter(and_(Classes.id == classobj.id, Rooms.id == roomobj.id))
+        alreadyroomclass = db.session.query(roomclasssubq.exists()).scalar()
+
+        if alreadyroomclass:
+            print "ROOM-CLASS EXISTS ALREADY"
+        else:
+            print "NO PREVIOUS ROOM-CLASS"
+            print "CREATING ROOM-CLASS"
+            classobj.rooms.append(roomobj)
+            db.session.commit()
+    else:
+        print "NO ROOMOBJ OR CLASSOBJ"
+
+
+def create_room_date_connection(roomobj, dateobj):
+
+    if roomobj and dateobj:
+        roomdatesubq = db.session.query(Dates).join(Dates.rooms).filter(and_(Dates.id == dateobj.id, Rooms.id == roomobj.id))
+        alreadyroomdate = db.session.query(roomdatesubq.exists()).scalar()
+
+        if alreadyroomdate:
+            print "ROOM-DATE EXISTS ALREADY"
+        else:
+            print "NO PREVIOUS ROOM-DATE"
+            print "CREATING ROOM-DATE"
+            dateobj.rooms.append(roomobj)
+            db.session.commit()
+    else:
+        print "NO ROOMOBJ OR DATEOBJ"
+
+
+def create_or_fetch_classobj(starttimevar, endtimevar, courseobj, dateobj):
+
+    classobj = None
+
+    if starttimevar and endtimevar and courseobj and dateobj:
+        #print int(starttimevar)
+        #print endtimevar
+        #print courseobj.id
+        #print dateobj.id
+        classsubq = db.session.query(Classes).join(Classes.courses).join(Classes.rooms).join(Classes.dates).filter(and_(Courses.id == courseobj.id, Dates.id == dateobj.id, Classes.starttime == starttimevar, Classes.endtime == endtimevar))
+        alreadyclass = db.session.query(classsubq.exists()).scalar()
+
+        #test = db.session.query(Classes).join(Classes.courses).join(Classes.rooms).join(Classes.dates).filter(and_(Courses.id == 70, Dates.id == 306, Classes.starttime == 8, Classes.endtime == 10)).first()
+        # print test
+
+        if alreadyclass:
+            print "CLASSOBJECT FETCHED"
+            classobj = classsubq.first()
+        else:
+            print "NO PREVIOUS CLASSOBJECT"
+
+            try:
+                tempdict = {}
+                tempdict['starttime'] = int(starttimevar)
+                tempdict['endtime'] = int(endtimevar)
+                tempdict['courses_id'] = courseobj.id
+                tempdict['dates_id'] = dateobj.id
+
+                record = Classes(**tempdict)
+                classobj = record
+                db.session.add(record)
                 db.session.commit()
+                print "CREATED CLASSOBJECT"
 
-        print "DONE"
+            except Exception, e:
+                varcode = "UNIQUE CONSTRAINT"
+                print varcode
+                db.session.rollback()
+                # raise
+
+
+    else:
+        print "NO STARTTIMEVAR OR ENDTIMEVAR OR COURSEOBJ OR DATEOBJ"
+
+    return classobj
+
+
+def create_or_fetch_courseobj(codevar, yearvar):
+
+    courseobj = None
+
+    if codevar and yearvar:
+
+        coursesubq = db.session.query(Courses).filter(and_(Courses.code == codevar, Courses.year == yearvar))
+        alreadycourse = db.session.query(coursesubq.exists()).scalar()
+
+        if alreadycourse:
+
+            courseobj = coursesubq.first()
+            print "COURSEOBJECT", courseobj.code, courseobj.year, "FETCHED"
+        else:
+            tempdict = {}
+            tempdict['code'] = codevar
+            tempdict['year'] = int(yearvar)
+            record = Courses(**tempdict)
+            courseobj = record
+            print "NO PREVIOUS COURSEOBJECT - CREATING COURSEOBJECT", courseobj.code, courseobj.year
+            db.session.add(record)
+            db.session.commit()
+    else:
+        print "NO CODEVAR OR YEARVAR"
+
+    return courseobj
+
+
+
+def create_or_fetch_dateobj(datevar):
+
+    dateobj = None
+
+    if datevar:
+        datesubq = db.session.query(Dates).filter(Dates.date == datevar)
+        alreadydate = db.session.query(datesubq.exists()).scalar()
+
+        if alreadydate:
+            print "DATEOBJECT FETCHED"
+            dateobj = datesubq.first()
+        else:
+            print "NO PREVIOUS DATEOBJECT"
+            print "CREATING DATEOBJECT"
+            tempdict = {}
+            tempdict['date'] = datevar
+            record = Dates(**tempdict)
+            dateobj = record
+            db.session.add(record)
+            db.session.commit()
+    else:
+        print "NO DATEVAR"
+
+    return dateobj
+
+
+
+def create_or_fetch_roomobj(roomvar, linkvar):
+    roomobj = None
+    # print "HEJ"
+    roomvarlist = roomvar.split()
+    roomvar = roomvarlist[0]
+    # print "HOPP"
+
+    alreadyroomlink = False
+    alreadyroom = False
+
+    if linkvar:
+        roomlinksubq = db.session.query(Rooms).filter(Rooms.link == linkvar)
+        alreadyroomlink = db.session.query(roomlinksubq.exists()).scalar()
+
+    if roomvar:
+        roomsubq = db.session.query(Rooms).filter(Rooms.name == roomvar)
+        alreadyroom = db.session.query(roomsubq.exists()).scalar()
+
+
+    if alreadyroomlink:
+        if alreadyroom:
+            roomobj = roomlinksubq.first()
+            print "ROOMOBJECT FETCHED"
+        else:
+            if roomvar:
+                roomobj = roomlinksubq.first()
+                roomobj.name = roomvar
+                db.session.commit()
+                print "ROOMOBJECT FETCHED"
+            else:
+                roomobj = roomlinksubq.first()
+
+    else:
+        if alreadyroom:
+            roomobj = roomsubq.first()
+            print "ROOMOBJECT FETCHED"
+            if linkvar:
+                roomobj.link = linkvar
+                db.session.commit()
+        else:
+            tempdict = {}
+
+            if roomvar:
+                tempdict['name'] = roomvar
+
+            if linkvar:
+                tempdict['link'] = linkvar
+
+            if roomvar or linkvar:
+                record = Rooms(**tempdict)
+                roomobj = record
+                db.session.add(record)
+                db.session.commit()
+                print "NO PREVIOUS ROOMOBJECT"
+                print "CREATING ROOMOBJECT"
+            else:
+                print "NO ROOMVAR OR LINKVAR"
+
+
+    return roomobj
+
+
 
 
 def create_or_fetch_teacherobj(emailvar):
@@ -109,348 +305,20 @@ def create_or_fetch_teacherobj(emailvar):
     return teacherobj
 
 
-# ADDING COURSES TO DB
-def courseinfoperyearandterm(x, y):
-
-    templist = []
-    tempdict2 = {}
-    tempdict2['year'] = None
-    tempdict2['round'] = None
-    tempdict2['courseinfo'] = templist
-
-    # try:
-    req = urllib2.urlopen('http://www.kth.se/api/kopps/v1/courseRounds/%s:%s' % (x, y))
-
-    xml = BeautifulSoup(req)
-
-    items = xml.findAll("courseround")
-
-    templist = []
-
-    for item in items:
-
-        coursecode = item['coursecode']
-        if coursecode[:2] == "AI":
-            startterm = item['startterm']
-            roundid = item['roundid']
-
-            year = startterm[:4]
-
-            term = startterm[-1:]
-
-
-
-            tempdict = {'coursecode': coursecode, 'year': year, 'term': term, 'periodone': False, 'periodtwo': False, 'periodthree': False, 'periodfour': False, 'startterm': startterm, 'roundid': roundid}
-
-            print "ADDED", tempdict['coursecode'].upper(), tempdict['year'].upper(), "TO LIST OF COURSES"
-
-            templist.append(tempdict)
-
-    tempdict2 = {'year': x, 'round': y, 'courseinfo': templist}
-
-    '''
-    except Exception, e:
-        varcode = "no list of courserounds"
-        print varcode
-        print x
-        print y
-    '''
-    return tempdict2
-
-
-
-
-
-def addcoursestotables_first(tempdict):
-
-    for item in tempdict['courseinfo']:
-        coursecode = item['coursecode']
-
-        year = item['year']
-        term = item['term']
-        roundid = item['roundid']
-
-        try:
-            req = urllib2.urlopen('http://www.kth.se/api/kopps/v1/course/%s/round/%s:%s/%s' % (coursecode, year, term, roundid))
-            xml = BeautifulSoup(req)
-            # print xml
-
-            try:
-                courseround = xml.find('courseround')
-
-                endweek = courseround['endweek'][-2:]
-                item['endweek'] = endweek
-
-                startweek = courseround['startweek'][-2:]
-                item['startweek'] = startweek
-
-                periodone = False
-                periodtwo = False
-                periodthree = False
-                periodfour = False
-
-                if int(startweek) < 5:
-                    periodthree = True
-
-                elif int(startweek) < 14:
-                    periodfour = True
-
-                elif int(startweek) < 37:
-                    periodone = True
-
-                elif int(startweek) < 49:
-                    periodtwo = True
-
-
-                if int(endweek) < 5:
-                    periodtwo = True
-                    if periodthree:
-                        periodfour = True
-                        periodone = True
-                    if periodfour:
-                        periodone = True
-
-                elif int(endweek) < 14:
-                    periodthree = True
-                    if periodfour:
-                        periodone = True
-                        periodtwo = True
-                    if periodone:
-                        periodtwo = True
-
-                elif int(endweek) < 37:
-                    periodfour = True
-                    if periodone:
-                        periodtwo = True
-                        periodthree = True
-                    if periodtwo:
-                        periodthree = True
-
-                elif int(endweek) < 49:
-                    periodone = True
-                    if periodtwo:
-                        periodthree = True
-                        periodfour = True
-                    if periodthree:
-                        periodfour = True
-
-                print "coursecode", coursecode
-                print "year", year
-                print "term", term
-                print "roundid", roundid
-                print "period one", periodone
-                print "period two", periodtwo
-                print "period three", periodthree
-                print "period four", periodfour
-                print "endweek", endweek
-                print "startweek", startweek
-
-                item['periodone'] = periodone
-                item['periodtwo'] = periodtwo
-                item['periodthree'] = periodthree
-                item['periodfour'] = periodfour
-
-
-
-            except Exception, e:
-                item['endweek'] = None
-                item['startweek'] = None
-                varcode = "no courseround"
-                print varcode
-
-            try:
-                courseresponsible = xml.find('courseresponsible')
-
-                emailcourseresponsible = courseresponsible['primaryemail']
-
-                item['emailcourseresponsible'] = emailcourseresponsible
-
-            except Exception, e:
-                item['emailcourseresponsible'] = None
-                varcode = "no courseresponsible"
-                print varcode, "in", coursecode
-
-            coursesfromdepartment2(item)
-            # print "XXXXXXXXXX"
-
-        except Exception, e:
-            print "NOT FINDING COURSE", coursecode, year
-            continue
-
-
-def coursesfromdepartment2(item):
-
-    code = item['coursecode']
-    year = item['year']
-    term = item['term']
-    periodone = item['periodone']
-    periodtwo = item['periodtwo']
-    periodthree = item['periodthree']
-    periodfour = item['periodfour']
-
-    roundid = item['roundid']
-    responsible = item['emailcourseresponsible']
-    startweek = item['startweek']
-    endweek = item['endweek']
-
-    # print code, year, term, periods, roundid, responsible, startweek, endweek
-
-    courseobj = create_or_fetch_courseobj(code, year)
-    courseobj.term = term
-    courseobj.periodone = periodone
-    courseobj.periodtwo = periodtwo
-    courseobj.periodthree = periodthree
-    courseobj.periodfour = periodfour
-    courseobj.roundid = roundid
-    courseobj.startweek = startweek
-    courseobj.endweek = endweek
-
-
-
-    if responsible:
-        # print "responsible!!!!"
-        teachersubq = db.session.query(Teachers).filter(Teachers.email == responsible)
-        responsibleexists = db.session.query(teachersubq.exists()).scalar()
-        if responsibleexists:
-            # print "exists!!!!"
-            courseobj.responsible_id = Teachers.query.filter_by(email=responsible).first().id
-
-    print "ADDED TERM, PERIODS, ROUNDID, STARTWEEK, ENDWEEK AND COURSE RESPONSIBLE TO", courseobj.code, courseobj.year
-
-    db.session.commit()
-
-    # print "hej!"
-
-
-
-def create_or_fetch_courseobj(codevar, yearvar):
+def fetch_courseobj(codevar, yearvar):
 
     courseobj = None
 
     if codevar and yearvar:
-
         coursesubq = db.session.query(Courses).filter(and_(Courses.code == codevar, Courses.year == yearvar))
         alreadycourse = db.session.query(coursesubq.exists()).scalar()
 
         if alreadycourse:
-
+            print "COURSEOBJECT FETCHED"
             courseobj = coursesubq.first()
-            print "COURSEOBJECT", courseobj.code, courseobj.year, "FETCHED"
         else:
-            tempdict = {}
-            tempdict['code'] = codevar
-            tempdict['year'] = yearvar
-            record = Courses(**tempdict)
-            courseobj = record
-            print "NO PREVIOUS COURSEOBJECT - CREATING COURSEOBJECT", courseobj.code, courseobj.year
-            db.session.add(record)
-            db.session.commit()
+            print "NO COURSEOBJECT TO FETCH"
     else:
         print "NO CODEVAR OR YEARVAR"
 
     return courseobj
-
-
-def fetchinglistofcodesfordepartmentcourses(department):
-
-    tempdict = {}
-
-    print "1"
-
-    try:
-        print "2"
-        j = urllib2.urlopen('http://www.kth.se/api/kopps/v2/courses/%s.json' % (department))
-        print "3"
-        j_obj = json.load(j)
-        print "4"
-        templist = []
-        print "5"
-        for item in j_obj['courses']:
-            templist.append(item['code'])
-
-        print "6"
-
-        tempdict = {'department': j_obj['department'], 'courses': templist}
-
-    except Exception, e:
-        varcode = "no list of codes for department courses"
-        print varcode
-
-    return tempdict
-
-
-
-
-
-def jsonifycoursesfromdepartment(tempdict):
-
-    templist2 = []
-    tempdict2 = {}
-
-    for item in tempdict['courses']:
-
-        try:
-            req = urllib2.urlopen('http://www.kth.se/api/kopps/v1/course/%s' % (item))
-
-            xml = BeautifulSoup(req)
-
-            # varname = xml.title.string
-            try:
-                varcode = xml.course['code']
-                # print varcode
-
-            except Exception, e:
-                varcode = None
-                # print varcode
-
-            try:
-                varmail = xml.examiner['primaryemail']
-                # print varmail
-
-            except Exception, e:
-                varmail = None
-                # print varmail
-
-            try:
-                varname = xml.title.string
-                # print varname.encode('utf-8')
-                # print varname
-
-            except Exception, e:
-                varname = None
-                # print varname
-
-            tempdict2 = {'code': varcode, 'name': varname, 'examiner': varmail, 'department': tempdict['department']}
-
-            templist2.append(tempdict2)
-
-        except Exception, e:
-            varcode = "no URL"
-            print varcode + " " + item
-            continue
-
-    return templist2
-
-
-def coursesfromdepartment3(templist):
-    for items in templist:
-        for item in items:
-            name = item['name']
-            code = item['code']
-            examiner = item['examiner']
-            department = item['department']
-
-            teacherobj = create_or_fetch_teacherobj(examiner)
-
-            latestcoursesubq = db.session.query(Courses).filter(Courses.code == code).order_by(Courses.year.desc())
-            existscourse = db.session.query(latestcoursesubq.exists()).scalar()
-
-            if existscourse and teacherobj:
-                latestcourse = latestcoursesubq.first()
-                latestcourse.name = name
-                latestcourse.examiner_id = teacherobj.id
-                db.session.commit()
-            else:
-                print "COURSE OR EXAMINER NOT EXISTING"
-                print code
-                print examiner
