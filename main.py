@@ -1,3 +1,4 @@
+from app import app, db
 from flask import render_template, request, flash, url_for, redirect, abort, session
 from flask.ext.sqlalchemy import get_debug_queries
 from sqlalchemy import desc, create_engine, func
@@ -27,7 +28,7 @@ from flask_restplus import Resource, Api, fields
 from wtforms import Form, BooleanField, TextField, PasswordField, validators
 
 
-from app import app, db
+
 
 from api import manager
 from models import *
@@ -35,8 +36,8 @@ from views import *
 
 
 
-manager.create_api(Person)
-manager.create_api(Pet)
+manager.create_api(Courses)
+manager.create_api(Teachers)
 
 
 
