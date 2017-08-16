@@ -38,6 +38,11 @@ subjects_classes = db.Table('subjects_classes',
                             db.Column('classes_id', db.Integer, db.ForeignKey('classes.id'))
                             )
 
+coursefacts_courses = db.Table('coursefacts_courses',
+                            db.Column('coursefacts_id', db.Integer, db.ForeignKey('coursefacts.id')),
+                            db.Column('courses_id', db.Integer, db.ForeignKey('courses.id'))
+                            )
+
 
 # One-to-many. Parent to Rooms
 class Roomtypes(db.Model):
@@ -114,7 +119,11 @@ class Courses(db.Model):
     endyear = db.Column(db.Integer)
     startdate = db.Column(db.DateTime)
     enddate = db.Column(db.DateTime)
+    targetgroup = db.Column(db.String(500))
+    partofprogram = db.Column(db.String(500))
     classes = db.relationship('Classes', cascade='all, delete, delete-orphan', backref='courses', lazy='dynamic')
+    # coursefacts_id = db.Column(db.Integer, db.ForeignKey('coursefacts.id'))
+    coursefacts = db.relationship('Coursefacts', secondary=coursefacts_courses, backref=db.backref('courses', lazy='dynamic'))
     examiner_id = db.Column(db.Integer, db.ForeignKey('teachers.id'))
     responsible_id = db.Column(db.Integer, db.ForeignKey('teachers.id'))
     assistantone_id = db.Column(db.Integer, db.ForeignKey('teachers.id'))
@@ -126,6 +135,21 @@ class Classtypes(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     classtype = db.Column(db.String(30), unique=True)
     classes = db.relationship('Classes', backref='classtypes', lazy='dynamic')
+
+
+
+# CHANGE FROM ONE TO MANY TO MANY TO MANY
+class Coursefacts(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100))
+    freetochoose = db.Column(db.Boolean, default=False)
+    mandatory = db.Column(db.Boolean, default=False)
+    recommended = db.Column(db.Boolean, default=False)
+    uppdrag = db.Column(db.Boolean, default=False)
+    opened = db.Column(db.Boolean, default=False)
+    year = db.Column(db.Integer)
+    # courses = db.relationship('Courses', backref='coursefacts', lazy='dynamic')
+
 
 
 class Classes(db.Model):

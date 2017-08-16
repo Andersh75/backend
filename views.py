@@ -2,13 +2,14 @@ from app import app, db
 import requests
 from functions_collect_teachers import staffperdepartment, teachersfromdepartment
 from functions_collect_courses import coursesfromdepartment3, jsonifycoursesfromdepartment, fetchinglistofcodesfordepartmentcourses, coursesfromdepartment2, addcoursestotables_first, coursecodeandroundidperyearandterm
-from functions import open_password_protected_site, createtables, allcourses, create_course_date_connection, create_room_class_connection, create_room_date_connection, create_or_fetch_classobj, create_or_fetch_courseobj, create_or_fetch_dateobj, create_or_fetch_roomobj, create_or_fetch_teacherobj, fetch_courseobj
+from functions import open_password_protected_site, createtables, allcourses, create_coursefacts_course_connection, create_course_date_connection, create_room_class_connection, create_room_date_connection, create_or_fetch_classobj, create_or_fetch_courseobj, create_or_fetch_coursefactsobj, create_or_fetch_dateobj, create_or_fetch_roomobj, create_or_fetch_teacherobj, fetch_courseobj
 from functions_collect_slots import courseyear_from_classdate, fetchinglistofslotspercourse, parselistofslotspercourse
 from app import db
 import urllib
 import urllib2
 from urllib2 import urlopen
 from bs4 import BeautifulSoup
+import re
 from xml.etree import ElementTree as ET
 from models import *
 from sqlalchemy.sql import and_, or_, not_
@@ -19,6 +20,8 @@ from flask import jsonify
 import cookielib
 import mechanize
 from datetime import timedelta
+
+
 
 
 
@@ -37,7 +40,7 @@ def restartall():
     templist = []
 
     departments = ["AIB", "AIC", "AID", "AIE"]
-
+    # departments = ["AID"]
     # ADD_ALL_TEACHERS_TO_LIST
     for item in departments:
 
@@ -55,10 +58,10 @@ def restartall():
 
 
     # COLLECTING COURSE CODE AND ROUNDID PER YEAR AND TERM
-    tempdict20151 = coursecodeandroundidperyearandterm(2015, 1)
-    tempdict20152 = coursecodeandroundidperyearandterm(2015, 2)
-    tempdict20161 = coursecodeandroundidperyearandterm(2016, 1)
-    tempdict20162 = coursecodeandroundidperyearandterm(2016, 2)
+    # tempdict20151 = coursecodeandroundidperyearandterm(2015, 1)
+    # tempdict20152 = coursecodeandroundidperyearandterm(2015, 2)
+    # tempdict20161 = coursecodeandroundidperyearandterm(2016, 1)
+    # tempdict20162 = coursecodeandroundidperyearandterm(2016, 2)
     tempdict20171 = coursecodeandroundidperyearandterm(2017, 1)
     tempdict20172 = coursecodeandroundidperyearandterm(2017, 2)
 
@@ -66,13 +69,14 @@ def restartall():
     # ROUND ID IS LIKE PART ONE OR TWO OF TERM
     # COLLECT STARTWEEK, ENDWEEK, PERIODS AND COURSE RESPONSIBLE
     # ADD COURSE TO DB - NO INFO ON EXAMINER YET
-    addcoursestotables_first(tempdict20151)
-    addcoursestotables_first(tempdict20152)
-    addcoursestotables_first(tempdict20161)
-    addcoursestotables_first(tempdict20162)
+    # addcoursestotables_first(tempdict20151)
+    # addcoursestotables_first(tempdict20152)
+    # addcoursestotables_first(tempdict20161)
+    # addcoursestotables_first(tempdict20162)
     addcoursestotables_first(tempdict20171)
     addcoursestotables_first(tempdict20172)
 
+    print "XXXXXX"
 
     # COLLECTING EXAMNINER FOR EACH COURSE AND ADDS TO LATEST COURSE IN DB
     for item in departments:
@@ -94,6 +98,10 @@ def slotsfromapi():
 
     # testcourse = ["AI2808"]
 
+    # templist = []
+
+    # templist.append(fetch_courseobj('AI2808', 2017))
+
     templist = allcourses()
     # templist = testcourse
     for idx, item in enumerate(templist):
@@ -105,15 +113,22 @@ def slotsfromapi():
 
         startdate = item.startdate
 
-        print startdate.strftime("%Y-%m-%d")
+        # print startdate.strftime("%Y-%m-%d")
 
         enddate = startdate + timedelta(days=365)
 
-        print enddate.strftime("%Y-%m-%d")
+        # print enddate.strftime("%Y-%m-%d")
 
         tempdict = {}
         tempdict = fetchinglistofslotspercourse(coursecode, startdate.strftime("%Y-%m-%d"), enddate.strftime("%Y-%m-%d"))
-        parselistofslotspercourse(tempdict)
+
+        try:
+            parselistofslotspercourse(tempdict)
+        except Exception, e:
+            varcode = "CORRUPT"
+            print coursecode
+
+    return "DONE"
 
 
 
@@ -449,8 +464,121 @@ def xslotsfromsocial():
     return "DONE"
 
 
+# Link programs to courses
+@app.route('/trying')
+def trying():
 
 
+    templist = allcourses()
+
+    for item in templist:
+
+        req = urllib2.urlopen('https://www.kth.se/student/kurser/kurs/%s?startterm=%s%s' % (item.code, item.year, item.term))
+
+        xml = BeautifulSoup(req)
+
+        xml = xml.find_all("div", id=lambda value: value and value.startswith(str(item.year)))
+
+
+        tgroup = ""
+        tprogram = ""
+
+        for courseround in xml:
+
+            group = courseround.find(text=re.compile('grupp'))
+
+            if group:
+                targetgroup = group.parent.findNext('p')
+
+                if targetgroup:
+
+                    tgroup = tgroup + targetgroup.contents[0] + ";"
+
+
+
+            program = courseround.find(text=re.compile('Del av program'))
+
+
+
+            if program:
+
+                partofprogram = program.parent.findNext('ul')
+
+                if partofprogram:
+
+                    partofprogram = partofprogram.findAll('a')
+
+                    mystring = ""
+
+                    for linkitem in partofprogram:
+
+                        freetochoosevar = False
+                        recommendedvar = False
+                        mandatoryvar = False
+                        uppdragvar = False
+                        openvar = False
+                        yearvar = 0
+                        namevar = "None"
+
+                        mystring = mystring + linkitem.contents[0] + ";"
+
+                        if "andidatprogram" in linkitem.contents[0]:
+                            if "och finans" in linkitem.contents[0]:
+                                namevar = "TFOFK"
+                            if "utveckling" in linkitem.contents[0]:
+                                namevar = "TFAFK"
+                        if "asterprogram" in linkitem.contents[0]:
+                            if "byggande" in linkitem.contents[0]:
+                                namevar = "TFOBM"
+                            else:
+                                namevar = "Other"
+
+                        if "ivilingenj" in linkitem.contents[0]:
+                            namevar = "CSAMH"
+                        if "1" in linkitem.contents[0]:
+                            yearvar = 1
+                        if "2" in linkitem.contents[0]:
+                            yearvar = 2
+                        if "3" in linkitem.contents[0]:
+                            yearvar = 3
+
+                        if "valfri" in linkitem.contents[0]:
+                            freetochoosevar = True
+                        if "ekommender" in linkitem.contents[0]:
+                            recommendedvar = True
+                        if "bligatorisk" in linkitem.contents[0]:
+                            mandatoryvar = True
+
+                        # if "ppdragsutb" in linkitem.contents[0]:
+                        #    uppdragvar = True
+                        # if "ppdragsutb" in tgroup:
+                        #    uppdragvar = True
+                        # if "alla program" in tgroup:
+                        #    openvar = True
+
+                        coursefactsobj = create_or_fetch_coursefactsobj(namevar, freetochoosevar, mandatoryvar, recommendedvar, yearvar, uppdragvar, openvar)
+
+                        create_coursefacts_course_connection(coursefactsobj, item)
+
+                    tprogram = tprogram + mystring
+
+
+        item.targetgroup = tgroup
+
+        item.partofprogram = tprogram
+
+        db.session.commit()
+
+
+
+
+
+
+
+
+
+
+    return "DONE"
 
 
 @app.route("/")

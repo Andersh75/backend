@@ -23,9 +23,9 @@ def fetchinglistofslotspercourse(course, starttime, endtime):
     tempdict['code'] = course
     tempdict['slots'] = templist
 
-    print course
-    print starttime
-    print endtime
+    # print course
+    # print starttime
+    # print endtime
 
     try:
         j = urllib2.urlopen('http://www.kth.se/api/schema/v2/course/%s?startTime=%s&endTime=%s' % (course, starttime, endtime))
@@ -54,6 +54,7 @@ def courseyear_from_classdate(code, year, date):
         coursestartyearsubq = db.session.query(Courses).filter(and_(Courses.code == code, Courses.startyear == year))
         startyearexists = db.session.query(coursestartyearsubq.exists()).scalar()
 
+        # print "courseyear from classdate"
 
 
 
@@ -62,9 +63,9 @@ def courseyear_from_classdate(code, year, date):
             startdate = startyearobj.startdate
             enddate = startyearobj.enddate
 
-            print startdate
+            # print startdate
 
-            print datetime.datetime.strptime(date, "%Y-%m-%d")
+            # print datetime.datetime.strptime(date, "%Y-%m-%d")
             if startdate > datetime.datetime.strptime(date, "%Y-%m-%d"):
                 year = year - 1
         else:
@@ -74,9 +75,14 @@ def courseyear_from_classdate(code, year, date):
 
 
 def parselistofslotspercourse(tempdict):
+
+    # print tempdict
     code = tempdict['code']
 
+    # print "c"
+
     for item in tempdict['slots']:
+        # print item
         info = item['info']
         start = item['start']
         end = item['end']
@@ -120,9 +126,13 @@ def parselistofslotspercourse(tempdict):
             create_room_date_connection(roomobj, dateobj)
             classobj = create_or_fetch_classobj(starttime, endtime, courseobj, dateobj)
             create_room_class_connection(roomobj, classobj)
+
+            # print "a"
             if classobj:
                 classobj.contentapi = info
+                classobj.content = title
                 # print "INFO ADDED TO CLASS"
                 db.session.commit()
+            # print "b"
 
     return "DONE"

@@ -286,9 +286,7 @@ def fetchinglistofcodesfordepartmentcourses(department):
 
 
 
-
-
-def jsonifycoursesfromdepartment(tempdict):
+def jsonifycoursesfromdepartmentold(tempdict):
 
     templist2 = []
     tempdict2 = {}
@@ -338,6 +336,64 @@ def jsonifycoursesfromdepartment(tempdict):
     return templist2
 
 
+def jsonifycoursesfromdepartment(tempdict):
+
+    templist2 = []
+    tempdict2 = {}
+
+    for item in tempdict['courses']:
+
+        try:
+            j = urllib2.urlopen('http://www.kth.se/api/kopps/v2/course/%s' % (item))
+            # print "3"
+            jload = json.load(j)
+
+            # print jload['title']['en']
+
+            req = urllib2.urlopen('http://www.kth.se/api/kopps/v1/course/%s' % (item))
+
+            xml = BeautifulSoup(req)
+
+            # varname = xml.title.string
+            try:
+                varcode = jload['code']
+                # print varcode
+
+            except Exception, e:
+                varcode = None
+                # print varcode
+
+            try:
+                varmail = xml.examiner['primaryemail']
+                # print varmail
+
+            except Exception, e:
+                varmail = None
+                # print varmail
+
+            try:
+                varname = jload['title']['en']
+                # print varname.encode('utf-8')
+                # print varname
+
+            except Exception, e:
+                varname = None
+                # print varname
+
+            tempdict2 = {'code': varcode, 'name': varname, 'examiner': varmail, 'department': tempdict['department']}
+
+            print tempdict2
+            print "sss"
+            templist2.append(tempdict2)
+
+        except Exception, e:
+            varcode = "no URL"
+            print varcode + " " + item
+            continue
+
+    return templist2
+
+
 def coursesfromdepartment3(templist):
     for items in templist:
         for item in items:
@@ -351,9 +407,14 @@ def coursesfromdepartment3(templist):
             latestcoursesubq = db.session.query(Courses).filter(Courses.code == code).order_by(Courses.year.desc())
             existscourse = db.session.query(latestcoursesubq.exists()).scalar()
 
-            if existscourse and teacherobj:
+            if existscourse:
                 latestcourse = latestcoursesubq.first()
                 latestcourse.name = name
+                db.session.commit()
+
+            if existscourse and teacherobj:
+                latestcourse = latestcoursesubq.first()
+                # latestcourse.name = name
                 latestcourse.examiner_id = teacherobj.id
                 db.session.commit()
             else:

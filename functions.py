@@ -113,6 +113,23 @@ def create_room_date_connection(roomobj, dateobj):
         print "NO ROOMOBJ OR DATEOBJ"
 
 
+def create_coursefacts_course_connection(coursefactsobj, courseobj):
+
+    if coursefactsobj and courseobj:
+        coursefactcoursesubq = db.session.query(Courses).join(Courses.coursefacts).filter(and_(Courses.id == courseobj.id, Coursefacts.id == coursefactsobj.id))
+        alreadycoursefactcourse = db.session.query(coursefactcoursesubq.exists()).scalar()
+
+        if alreadycoursefactcourse:
+            print "COURSEFACT-COURSE EXISTS ALREADY"
+        else:
+            print "NO PREVIOUS COURSEFACT-COURSE"
+            print "CREATING COURSEFACT-COURSE"
+            courseobj.coursefacts.append(coursefactsobj)
+            db.session.commit()
+    else:
+        print "NO ROOMOBJ OR DATEOBJ"
+
+
 def create_or_fetch_classobj(starttimevar, endtimevar, courseobj, dateobj):
 
     classobj = None
@@ -158,6 +175,57 @@ def create_or_fetch_classobj(starttimevar, endtimevar, courseobj, dateobj):
         print "NO STARTTIMEVAR OR ENDTIMEVAR OR COURSEOBJ OR DATEOBJ"
 
     return classobj
+
+
+def create_or_fetch_coursefactsobj(namevar, freetochoosevar, mandatoryvar, recommendedvar, yearvar, uppdragvar, openvar):
+
+    coursefactsobj = None
+
+    if namevar:
+        #print int(starttimevar)
+        #print endtimevar
+        #print courseobj.id
+        #print dateobj.id
+        coursefactssubq = db.session.query(Coursefacts).filter(and_(Coursefacts.name == namevar, Coursefacts.freetochoose == freetochoosevar, Coursefacts.mandatory == mandatoryvar, Coursefacts.recommended == recommendedvar, Coursefacts.year == yearvar, Coursefacts.uppdrag == uppdragvar, Coursefacts.opened == openvar))
+        alreadycoursefacts = db.session.query(coursefactssubq.exists()).scalar()
+
+        #test = db.session.query(Classes).join(Classes.courses).join(Classes.rooms).join(Classes.dates).filter(and_(Courses.id == 70, Dates.id == 306, Classes.starttime == 8, Classes.endtime == 10)).first()
+        # print test
+
+        if alreadycoursefacts:
+            print "COURSEFACTSOBJECT FETCHED"
+            coursefactsobj = coursefactssubq.first()
+        else:
+            print "NO PREVIOUS COURSEFACTSOBJECT"
+
+
+            tempdict = {}
+            tempdict['name'] = namevar
+            tempdict['freetochoose'] = freetochoosevar
+            tempdict['mandatory'] = mandatoryvar
+            tempdict['recommended'] = recommendedvar
+            tempdict['year'] = yearvar
+            tempdict['uppdrag'] = uppdragvar
+            tempdict['opened'] = openvar
+
+            record = Coursefacts(**tempdict)
+            coursefactsobj = record
+
+
+            db.session.add(record)
+
+            print "bbbb"
+            db.session.commit()
+
+            print "sfsdf"
+            print "CREATED COURSEFACTSOBJECT"
+
+
+    else:
+        print "NO NAMEVAR"
+
+    return coursefactsobj
+
 
 
 def create_or_fetch_courseobj(codevar, yearvar):

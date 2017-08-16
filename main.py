@@ -35,9 +35,9 @@ from models import *
 from views import *
 
 
-
-manager.create_api(Courses)
-manager.create_api(Teachers)
+manager.create_api(Classes, results_per_page=2000)
+manager.create_api(Courses, results_per_page=200)
+manager.create_api(Teachers, results_per_page=200)
 
 
 
