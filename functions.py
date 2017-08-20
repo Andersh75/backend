@@ -130,7 +130,7 @@ def create_coursefacts_course_connection(coursefactsobj, courseobj):
         print "NO ROOMOBJ OR DATEOBJ"
 
 
-def create_or_fetch_classobj(starttimevar, endtimevar, courseobj, dateobj):
+def create_or_fetch_classobj(starttimevar, endtimevar, courseobj, dateobj, classtypeobj):
 
     classobj = None
 
@@ -157,6 +157,7 @@ def create_or_fetch_classobj(starttimevar, endtimevar, courseobj, dateobj):
                 tempdict['endtime'] = int(endtimevar)
                 tempdict['courses_id'] = courseobj.id
                 tempdict['dates_id'] = dateobj.id
+                tempdict['classtypes_id'] = classtypeobj.id
 
                 record = Classes(**tempdict)
                 classobj = record
@@ -214,10 +215,10 @@ def create_or_fetch_coursefactsobj(namevar, freetochoosevar, mandatoryvar, recom
 
             db.session.add(record)
 
-            print "bbbb"
+            # print "bbbb"
             db.session.commit()
 
-            print "sfsdf"
+            # print "sfsdf"
             print "CREATED COURSEFACTSOBJECT"
 
 
@@ -254,6 +255,39 @@ def create_or_fetch_courseobj(codevar, yearvar):
         print "NO CODEVAR OR YEARVAR"
 
     return courseobj
+
+
+def create_or_fetch_classtypeobj(classtypevar):
+
+    classtypeobj = None
+
+    if classtypevar:
+
+
+        classtypesubq = db.session.query(Classtypes).filter(Classtypes.classtype == classtypevar)
+        alreadyclasstype = db.session.query(classtypesubq.exists()).scalar()
+
+
+        if alreadyclasstype:
+
+            classtypeobj = classtypesubq.first()
+            print "CLASSTYPEOBJECT", classtypeobj.classtype, "FETCHED"
+        else:
+
+            tempdict = {}
+            tempdict['classtype'] = classtypevar
+            record = Classtypes(**tempdict)
+            classtypeobj = record
+
+            print "NO PREVIOUS CLASSTYPEOBJECT - CREATING CLASSTYPEOBJECT", classtypeobj.classtype
+            db.session.add(record)
+            db.session.commit()
+    else:
+        print "NO CLASSTYPEVAR"
+
+
+
+    return classtypeobj
 
 
 

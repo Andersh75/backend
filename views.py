@@ -76,7 +76,7 @@ def restartall():
     addcoursestotables_first(tempdict20171)
     addcoursestotables_first(tempdict20172)
 
-    print "XXXXXX"
+    # print "XXXXXX"
 
     # COLLECTING EXAMNINER FOR EACH COURSE AND ADDS TO LATEST COURSE IN DB
     for item in departments:

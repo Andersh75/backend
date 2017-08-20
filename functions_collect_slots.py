@@ -11,7 +11,7 @@ from flask import json
 import simplejson
 from flask import jsonify
 import datetime, calendar
-from functions import createtables, allcourses, create_course_date_connection, create_room_class_connection, create_room_date_connection, create_or_fetch_classobj, create_or_fetch_courseobj, create_or_fetch_dateobj, create_or_fetch_roomobj, create_or_fetch_teacherobj, fetch_courseobj
+from functions import createtables, allcourses, create_course_date_connection, create_room_class_connection, create_room_date_connection, create_or_fetch_classobj, create_or_fetch_courseobj, create_or_fetch_classtypeobj, create_or_fetch_dateobj, create_or_fetch_roomobj, create_or_fetch_teacherobj, fetch_courseobj
 
 
 
@@ -95,12 +95,18 @@ def parselistofslotspercourse(tempdict):
         starttime = start[11:13]
         endtime = end[11:13]
         year = int(start[:4])
-        kind_name = kind_name['sv']
+        kind_name = kind_name['en']
+
+        # print kind_name
 
 
         year = courseyear_from_classdate(code, year, date)
 
         # print start, "STARTYEAR", year
+
+
+        # #### add classkind
+
 
 
 
@@ -124,15 +130,18 @@ def parselistofslotspercourse(tempdict):
 
             roomobj = create_or_fetch_roomobj(roomvar, roomlinkvar)
             create_room_date_connection(roomobj, dateobj)
-            classobj = create_or_fetch_classobj(starttime, endtime, courseobj, dateobj)
+            classtypeobj = create_or_fetch_classtypeobj(kind_name)
+            classobj = create_or_fetch_classobj(starttime, endtime, courseobj, dateobj, classtypeobj)
             create_room_class_connection(roomobj, classobj)
 
-            # print "a"
+
+
             if classobj:
                 classobj.contentapi = info
                 classobj.content = title
-                # print "INFO ADDED TO CLASS"
+                print "INFO ADDED TO CLASS"
+
                 db.session.commit()
-            # print "b"
+
 
     return "DONE"

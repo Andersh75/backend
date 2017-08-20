@@ -153,7 +153,7 @@ def addcoursestotables_first(tempdict):
                     if periodthree:
                         periodfour = True
 
-                print "coursecode", coursecode
+                '''print "coursecode", coursecode
                 print "year", year
                 print "term", term
                 print "roundid", roundid
@@ -162,7 +162,7 @@ def addcoursestotables_first(tempdict):
                 print "period three", periodthree
                 print "period four", periodfour
                 print "endweek", endweek
-                print "startweek", startweek
+                print "startweek", startweek'''
 
                 item['periodone'] = periodone
                 item['periodtwo'] = periodtwo
@@ -382,8 +382,8 @@ def jsonifycoursesfromdepartment(tempdict):
 
             tempdict2 = {'code': varcode, 'name': varname, 'examiner': varmail, 'department': tempdict['department']}
 
-            print tempdict2
-            print "sss"
+            # print tempdict2
+            # print "sss"
             templist2.append(tempdict2)
 
         except Exception, e:
