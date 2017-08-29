@@ -99,6 +99,7 @@ def addcoursestotables_first(tempdict):
 
                 d = startyear + "-W" + startweek
                 item['startdate'] = datetime.datetime.strptime(d + '-1', "%Y-W%W-%w")
+                print "STARTDATE: ",item['startdate']
 
                 d = endyear + "-W" + endweek
                 item['enddate'] = datetime.datetime.strptime(d + '-0', "%Y-W%W-%w")

@@ -2,7 +2,7 @@ from app import app, db
 import requests
 from functions_collect_teachers import staffperdepartment, teachersfromdepartment
 from functions_collect_courses import coursesfromdepartment3, jsonifycoursesfromdepartment, fetchinglistofcodesfordepartmentcourses, coursesfromdepartment2, addcoursestotables_first, coursecodeandroundidperyearandterm
-from functions import open_password_protected_site, createtables, allcourses, create_coursefacts_course_connection, create_course_date_connection, create_room_class_connection, create_room_date_connection, create_or_fetch_classobj, create_or_fetch_courseobj, create_or_fetch_coursefactsobj, create_or_fetch_dateobj, create_or_fetch_roomobj, create_or_fetch_teacherobj, fetch_courseobj
+from functions import open_password_protected_site, createtables, allcourses, create_or_fetch_roomobj_without_link, create_or_fetch_notourclassobj, create_coursefacts_course_connection, create_course_date_connection, create_room_class_connection, create_room_date_connection, create_or_fetch_hourobj, create_or_fetch_classobj, create_or_fetch_courseobj, create_or_fetch_coursefactsobj, create_or_fetch_dateobj, create_or_fetch_roomobj, create_or_fetch_teacherobj, fetch_courseobj
 from functions_collect_slots import courseyear_from_classdate, fetchinglistofslotspercourse, parselistofslotspercourse
 from app import db
 import urllib
@@ -113,11 +113,11 @@ def slotsfromapi():
 
         startdate = item.startdate
 
-        # print startdate.strftime("%Y-%m-%d")
+        print "startdate: ",startdate.strftime("%Y-%m-%d")
 
         enddate = startdate + timedelta(days=365)
 
-        # print enddate.strftime("%Y-%m-%d")
+        print "enddate: ",enddate.strftime("%Y-%m-%d")
 
         tempdict = {}
         tempdict = fetchinglistofslotspercourse(coursecode, startdate.strftime("%Y-%m-%d"), enddate.strftime("%Y-%m-%d"))
@@ -127,6 +127,336 @@ def slotsfromapi():
         except Exception, e:
             varcode = "CORRUPT"
             print coursecode
+
+    return "DONE"
+
+
+
+@app.route('/bookedfromapiold')
+def bookedfromapiold():
+    '''
+    db.drop_all()
+    db.session.commit()
+
+    createtables()
+    '''
+
+    tempdict = {}
+    templist = []
+
+    j = urllib2.urlopen('http://www.kth.se/api/timetable/v1/reservations/search?start=2017-08-31T10:00:00&end=2017-11-01T10:00:00')
+
+    j_obj = json.load(j)
+
+
+    for item in j_obj:
+        try:
+            print item['id']
+        except Exception, e:
+            varcode = "NO ID"
+            print varcode
+
+
+        try:
+            print item['start']
+            starthour = int(item['start'][11:13])
+        except Exception, e:
+            varcode = "NO START"
+            print varcode
+
+
+        try:
+            print item['end']
+            endhour = int(item['end'][11:13])
+        except Exception, e:
+            varcode = "NO END"
+            print varcode
+
+
+        duration = endhour - starthour
+
+        print "DURATION", duration
+
+        hours = []
+
+        # hours.append(starthour)
+
+        i = 0
+
+        while i < duration:
+            hours.append(starthour + i)
+            i = i + 1
+
+        print "HOURS: ", hours
+
+
+
+        try:
+            print item['lastchanged']
+        except Exception, e:
+            varcode = "NO LASTCHANGED"
+            print varcode
+
+        try:
+            print item['lastrevised']
+        except Exception, e:
+            varcode = "NO LASTREVISITED"
+            print varcode
+
+
+        try:
+            for location in item['locations']:
+                print location['name']
+        except Exception, e:
+            varcode = "NO LOCATIONS"
+            print varcode
+
+
+
+        try:
+            print item['status']
+        except Exception, e:
+            varcode = "NO STATUS"
+            print varcode
+
+
+        bookedroomobj = None
+
+        if item['id']:
+            #print int(starttimevar)
+            #print endtimevar
+            #print courseobj.id
+            #print dateobj.id
+            bookedroomssubq = db.session.query(Bookedrooms).filter(Bookedrooms.id == item['id'])
+            alreadybookedroom = db.session.query(bookedroomssubq.exists()).scalar()
+
+            #test = db.session.query(Classes).join(Classes.courses).join(Classes.rooms).join(Classes.dates).filter(and_(Courses.id == 70, Dates.id == 306, Classes.starttime == 8, Classes.endtime == 10)).first()
+            # print test
+
+            if alreadybookedroom:
+                print "BOOKEDROOMSOBJECT FETCHED"
+                bookedroomobj = bookedroomssubq.first()
+            else:
+                print "NO PREVIOUS BOOKEDROOMSOBJECT"
+
+                try:
+                    tempdict = {}
+                    tempdict['number'] = item['id']
+                    tempdict['name'] = item['locations'][0]['name']
+                    tempdict['start'] = item['start']
+                    tempdict['end'] = item['end']
+                    tempdict['lastchanged'] = item['lastchanged']
+                    tempdict['lastrevised'] = item['lastrevised']
+                    tempdict['status'] = item['status']
+
+                    record = Bookedrooms(**tempdict)
+                    bookedroomobj = record
+                    db.session.add(record)
+                    db.session.commit()
+                    print "CREATED BOOKEDROOMSOBJECT"
+
+                except Exception, e:
+                    varcode = "SOMETHING WENT WRONG"
+                    print varcode
+
+            for hour in hours:
+                hourobj = create_or_fetch_hourobj(hour)
+
+                if (item['status'] == "Cancelled"):
+                    print "CANCELLED"
+                    remove_bookedroom_hour_connection(bookedroomobj, hourobj)
+                # else:
+                    # create_bookedroom_hour_connection(bookedroomobj, hourobj)
+
+
+
+
+        else:
+            print "NO ID"
+
+
+
+
+    return "DONE"
+
+
+@app.route('/bookedfromapi')
+def bookedfromapi():
+    '''
+    db.drop_all()
+    db.session.commit()
+
+    createtables()
+    '''
+
+    tempdict = {}
+    templist = []
+
+    j = urllib2.urlopen('http://www.kth.se/api/timetable/v1/reservations/search?start=2017-08-28T10:00:00&end=2017-10-28T12:00:00')
+
+    j_obj = json.load(j)
+
+
+    for item in j_obj:
+        '''
+        try:
+            print item['id']
+        except Exception, e:
+            varcode = "NO ID"
+            print varcode
+        '''
+
+
+        try:
+            starthour = int(item['start'][11:13])
+            startdate = item['start'][:10]
+            #print "starthour: ", starthour
+            #print "startdate: ", startdate
+        except Exception, e:
+            varcode = "NO START"
+            print varcode
+
+
+        try:
+            endhour = int(item['end'][11:13])
+            enddate = item['end'][:10]
+            #print "endhour: ", endhour
+            #print "enddate: ", enddate
+        except Exception, e:
+            varcode = "NO END"
+            print varcode
+
+
+        duration = endhour - starthour
+
+        #print "DURATION", duration
+
+        hours = []
+
+        # hours.append(starthour)
+
+        i = 0
+
+        while i < duration:
+            hours.append(starthour + i)
+            i = i + 1
+
+        #print "HOURS: ", hours
+
+
+        '''
+        try:
+            print item['lastchanged']
+        except Exception, e:
+            varcode = "NO LASTCHANGED"
+            print varcode
+
+        try:
+            print item['lastrevised']
+        except Exception, e:
+            varcode = "NO LASTREVISITED"
+            print varcode
+        '''
+
+
+        try:
+            print item['status']
+            status = item['status']
+        except Exception, e:
+            varcode = "NO STATUS"
+            print varcode
+
+
+        #try:
+        for location in item['locations']:
+            #print location['name']
+            roomvar = location['name']
+            dateobj = create_or_fetch_dateobj(datetime.datetime.strptime(startdate, "%Y-%m-%d"))
+
+            roomobj = create_or_fetch_roomobj_without_link(roomvar)
+            #print roomobj.name
+
+            for hour in hours:
+                hourobj = create_or_fetch_hourobj(hour)
+                #print "BEFORE"
+                #print roomobj.name
+                #print roomobj.id
+                # print dateobj.id
+                notourclassobj = create_or_fetch_notourclassobj(dateobj, hourobj, roomobj)
+                #print "CREATED: ", notourclassobj.id
+                if (status == "Cancelled"):
+                    print "DELETED: ", notourclassobj.id
+                    db.session.delete(notourclassobj)
+                    db.session.commit()
+
+
+        #except Exception, e:
+            #varcode = "NO LOCATIONS"
+            #print varcode
+
+
+
+        '''
+
+
+        try:
+            for staff in item['staffs']:
+                print staff['kthId']
+        except Exception, e:
+            varcode = "NO STAFFS"
+            print varcode
+
+
+        try:
+            print item['department']['code']
+        except Exception, e:
+            varcode = "NO DEPARTMENT"
+            print varcode
+
+
+        try:
+            for program in item['programmes']:
+                print program['code']
+        except Exception, e:
+            varcode = "NO PROGRAMMES"
+            print varcode
+
+
+        try:
+            for course in item['courses']:
+                print course['id']
+        except Exception, e:
+            varcode = "NO COURSES"
+            print varcode
+        # print item['offerings']
+
+        try:
+            print item['description']
+        except Exception, e:
+            varcode = "NO DESCRIPTION"
+            print varcode
+
+        try:
+            print item['department']['name']
+        except Exception, e:
+            varcode = "NO DEPARTMENT"
+            print varcode
+
+
+        try:
+            print item['typedesc']
+        except Exception, e:
+            varcode = "NO TYPEDESC"
+            print varcode
+
+
+        try:
+            print item['typename']
+        except Exception, e:
+            varcode = "NO TYPENAME"
+            print varcode
+        '''
+
 
     return "DONE"
 

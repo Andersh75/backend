@@ -113,6 +113,8 @@ def create_room_date_connection(roomobj, dateobj):
         print "NO ROOMOBJ OR DATEOBJ"
 
 
+
+
 def create_coursefacts_course_connection(coursefactsobj, courseobj):
 
     if coursefactsobj and courseobj:
@@ -176,6 +178,55 @@ def create_or_fetch_classobj(starttimevar, endtimevar, courseobj, dateobj, class
         print "NO STARTTIMEVAR OR ENDTIMEVAR OR COURSEOBJ OR DATEOBJ"
 
     return classobj
+
+
+def create_or_fetch_notourclassobj(dateobj, hourobj, roomobj):
+
+    notourclassobj = None
+
+    if roomobj and hourobj and dateobj:
+        #print int(starttimevar)
+        #print endtimevar
+        print "ID"
+        print roomobj.name
+        print roomobj.id
+        #print dateobj.id
+        notourclasssubq = db.session.query(Notourclasses).join(Notourclasses.hours).join(Notourclasses.rooms).join(Notourclasses.dates).filter(and_(Hours.id == hourobj.id, Dates.id == dateobj.id, Rooms.id == roomobj.id))
+        alreadynotourclass = db.session.query(notourclasssubq.exists()).scalar()
+
+        #test = db.session.query(Classes).join(Classes.courses).join(Classes.rooms).join(Classes.dates).filter(and_(Courses.id == 70, Dates.id == 306, Classes.starttime == 8, Classes.endtime == 10)).first()
+        # print test
+
+        if alreadynotourclass:
+            #print "NOTOURCLASSOBJECT FETCHED"
+            notourclassobj = notourclasssubq.first()
+        else:
+            #print "NO PREVIOUS NOTOURCLASSOBJECT"
+
+            # try:
+            tempdict = {}
+            tempdict['hours_id'] = hourobj.id
+            tempdict['dates_id'] = dateobj.id
+            tempdict['rooms_id'] = roomobj.id
+
+            record = Notourclasses(**tempdict)
+            notourclassobj = record
+            db.session.add(record)
+            db.session.commit()
+            #print "CREATED NOTOURCLASSOBJECT"
+
+            # except Exception, e:
+                # varcode = "UNIQUE CONSTRAINT"
+                # print varcode
+                # db.session.rollback()
+                # raise
+
+
+    else:
+        print "NO DATEOBJ OR ROOMOBJ OR HOUROBJ"
+
+    return notourclassobj
+
 
 
 def create_or_fetch_coursefactsobj(namevar, freetochoosevar, mandatoryvar, recommendedvar, yearvar, uppdragvar, openvar):
@@ -257,6 +308,36 @@ def create_or_fetch_courseobj(codevar, yearvar):
     return courseobj
 
 
+
+def create_or_fetch_hourobj(hourvar):
+
+    hourobj = None
+
+    if hourvar:
+
+        hoursubq = db.session.query(Hours).filter(Hours.hour == hourvar)
+        alreadyhour = db.session.query(hoursubq.exists()).scalar()
+
+        if alreadyhour:
+
+            hourobj = hoursubq.first()
+            print "HOUROBJECT", hourobj.hour, "FETCHED"
+        else:
+            tempdict = {}
+            tempdict['hour'] = hourvar
+            record = Hours(**tempdict)
+            hourobj = record
+            print "NO PREVIOUS HOUROBJECT - CREATING HOUROBJECT", hourobj.hour
+            db.session.add(record)
+            db.session.commit()
+    else:
+        print "NO HOURVAR"
+
+    return hourobj
+
+
+
+
 def create_or_fetch_classtypeobj(classtypevar):
 
     classtypeobj = None
@@ -300,11 +381,11 @@ def create_or_fetch_dateobj(datevar):
         alreadydate = db.session.query(datesubq.exists()).scalar()
 
         if alreadydate:
-            print "DATEOBJECT FETCHED"
+            #print "DATEOBJECT FETCHED"
             dateobj = datesubq.first()
         else:
-            print "NO PREVIOUS DATEOBJECT"
-            print "CREATING DATEOBJECT"
+            #print "NO PREVIOUS DATEOBJECT"
+            #print "CREATING DATEOBJECT"
             tempdict = {}
             tempdict['date'] = datevar
             record = Dates(**tempdict)
@@ -340,20 +421,20 @@ def create_or_fetch_roomobj(roomvar, linkvar):
     if alreadyroomlink:
         if alreadyroom:
             roomobj = roomlinksubq.first()
-            print "ROOMOBJECT FETCHED"
+            #print "ROOMOBJECT FETCHED"
         else:
             if roomvar:
                 roomobj = roomlinksubq.first()
                 roomobj.name = roomvar
                 db.session.commit()
-                print "ROOMOBJECT FETCHED"
+                #print "ROOMOBJECT FETCHED"
             else:
                 roomobj = roomlinksubq.first()
 
     else:
         if alreadyroom:
             roomobj = roomsubq.first()
-            print "ROOMOBJECT FETCHED"
+            #print "ROOMOBJECT FETCHED"
             if linkvar:
                 roomobj.link = linkvar
                 db.session.commit()
@@ -371,14 +452,53 @@ def create_or_fetch_roomobj(roomvar, linkvar):
                 roomobj = record
                 db.session.add(record)
                 db.session.commit()
-                print "NO PREVIOUS ROOMOBJECT"
-                print "CREATING ROOMOBJECT"
+                #print "NO PREVIOUS ROOMOBJECT"
+                #print "CREATING ROOMOBJECT"
             else:
                 print "NO ROOMVAR OR LINKVAR"
 
 
     return roomobj
 
+
+
+
+def create_or_fetch_roomobj_without_link(roomvar):
+    roomobj = None
+    # print "HEJ"
+    roomvarlist = roomvar.split()
+    roomvar = roomvarlist[0]
+    # print "HOPP"
+
+    alreadyroom = False
+
+
+    if roomvar:
+        roomsubq = db.session.query(Rooms).filter(Rooms.name == roomvar)
+        alreadyroom = db.session.query(roomsubq.exists()).scalar()
+
+
+
+    if alreadyroom:
+        roomobj = roomsubq.first()
+        # print "ROOMOBJECT FETCHED"
+
+    else:
+        tempdict = {}
+
+        if roomvar:
+            tempdict['name'] = roomvar
+            record = Rooms(**tempdict)
+            roomobj = record
+            db.session.add(record)
+            db.session.commit()
+            #print "NO PREVIOUS ROOMOBJECT"
+            #print "CREATING ROOMOBJECT"
+        else:
+            print "NO ROOMVAR"
+
+
+    return roomobj
 
 
 

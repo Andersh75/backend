@@ -10,6 +10,7 @@ teachers_classes = db.Table('teachers_classes',
                             UniqueConstraint('teachers_id', 'classes_id')
                             )
 
+
 rooms_classes = db.Table('rooms_classes',
                          db.Column('rooms_id', db.Integer, db.ForeignKey('rooms.id')),
                          db.Column('classes_id', db.Integer, db.ForeignKey('classes.id')),
@@ -76,6 +77,7 @@ class Dates(db.Model):
     rooms = db.relationship('Rooms', secondary=dates_rooms, backref=db.backref('dates', lazy='dynamic'))
     teachers = db.relationship('Teachers', secondary=dates_teachers, backref=db.backref('dates', lazy='dynamic'))
     classes = db.relationship('Classes', backref='dates', lazy='dynamic')
+    notourclasses = db.relationship('Notourclasses', backref='dates', lazy='dynamic')
 
 
 class Teachers(db.Model):
@@ -169,18 +171,30 @@ class Classes(db.Model):
 
 
 
+class Hours(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    hour = db.Column(db.Integer, nullable=False)
+    notourclasses = db.relationship('Notourclasses', backref='hours', lazy='dynamic')
+    # bookedrooms = db.relationship('Bookedrooms', secondary=hours_bookedrooms, backref=db.backref('hours', lazy='dynamic'))
+    # rooms = db.relationship('Rooms', secondary=dates_rooms, backref=db.backref('dates', lazy='dynamic'))
+
+
+
 class Notourclasses(db.Model):
-    __table_args__ = (db.UniqueConstraint('startdate', 'enddate', 'endtime', 'starttime', 'lastchangeddate', 'lastchangedtime', 'status', 'room_id'),
+    __table_args__ = (db.UniqueConstraint('hours_id', 'dates_id', 'rooms_id'),
                       )
     id = db.Column(db.Integer, primary_key=True)
-    startdate = db.Column(db.DateTime, nullable=False)
-    enddate = db.Column(db.DateTime, nullable=False)
-    starttime = db.Column(db.String(3), nullable=False)
-    endtime = db.Column(db.String(3), nullable=False)
-    room_id = db.Column(db.Integer, db.ForeignKey('rooms.id'))
-    status = db.Column(db.String(100), nullable=False)
-    lastchangeddate = db.Column(db.DateTime, nullable=False)
-    lastchangedtime = db.Column(db.String(3), nullable=False)
+    # startdate = db.Column(db.DateTime, nullable=False)
+    # enddate = db.Column(db.DateTime, nullable=False)
+    # starttime = db.Column(db.String(3), nullable=False)
+    # endtime = db.Column(db.String(3), nullable=False)
+
+    # status = db.Column(db.String(100), nullable=False)
+    # lastchangeddate = db.Column(db.DateTime, nullable=False)
+    # lastchangedtime = db.Column(db.String(3), nullable=False)
+    hours_id = db.Column(db.Integer, db.ForeignKey('hours.id'))
+    dates_id = db.Column(db.Integer, db.ForeignKey('dates.id'))
+    rooms_id = db.Column(db.Integer, db.ForeignKey('rooms.id'))
     # __table_args__ = (db.UniqueConstraint('starttime', 'endtime', 'courses_id', 'dates_id),)
     # UniqueConstraint('starttime', 'endtime', 'courses_id', 'dates_id')
 
