@@ -42,7 +42,7 @@ manager.create_api(Classtypes, allow_patch_many=True, allow_delete_many=True, me
 manager.create_api(Teachers, allow_patch_many=True, allow_delete_many=True, methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], results_per_page=200)
 manager.create_api(Rooms, allow_patch_many=True, allow_delete_many=True, methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], results_per_page=2000)
 
-
+# 
 
 if __name__ == "__main__":
     # db.create_all()
