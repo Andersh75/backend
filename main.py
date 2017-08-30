@@ -44,6 +44,7 @@ manager.create_api(Rooms, allow_patch_many=True, allow_delete_many=True, methods
 
 
 
+
 if __name__ == "__main__":
     # db.create_all()
     app.run(host='0.0.0.0', debug=True)
